@@ -785,4 +785,18 @@ class Writer {
 
 		out.write(bytes);
 	}
+
+	public function customWriteNode(node: FbxNode) {
+		var old = out;
+		var header = new haxe.io.BytesOutput();
+		out = header;
+
+		writeHeader();
+		writeNode(node);
+
+		var bytes = header.getBytes();
+		out = old;
+
+		out.write(bytes);
+	}
 }

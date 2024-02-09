@@ -285,17 +285,21 @@ class HMDOut extends BaseLibrary {
 		}
 
 		var shapes = geom.getRoot().getAll("Shape");
-		var shapeIndexes = [];
+		var shapeIndexes = []; // Indexes of vertex used in blendshapes
 		var remappedShapes = [];
 		for ( s in shapes ) {
 			shapeIndexes.push(s.get("Indexes").getInts());
+
 			remappedShapes.push([]);
+			for (i in 0...shapeIndexes[shapeIndexes.length -1].length)
+				remappedShapes[remappedShapes.length - 1].push([]);
 		}
 
 		g.bounds = new h3d.col.Bounds();
 		var stride = g.vertexFormat.stride;
 		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
 		var vertexRemap = new Array<Int>();
+		var vertexRemapShape = new Array<Array<Int>>();
 		var index = geom.getPolygons();
 		var count = 0, matPos = 0, stri = 0;
 		var lookup = new Map();
@@ -418,12 +422,14 @@ class HMDOut extends BaseLibrary {
 						vbuf.push(tmpBuf[i]);
 					vids.push(found);
 				}
+
 				vertexRemap.push(found);
+
 				for ( s in 0...shapeIndexes.length ) {
-					if ( shapeIndexes[s].contains(vidx) ) {
-						remappedShapes[s].push(vidx + 1);
-					} else {
-						remappedShapes[s].push(0);
+					for (idx in 0...shapeIndexes[s].length) {
+						if (shapeIndexes[s][idx] == vidx) {
+							remappedShapes[s][idx].push(found);
+						}
 					}
 				}
 			}
@@ -633,9 +639,23 @@ class HMDOut extends BaseLibrary {
 				for( index in shapeIndexes[i] )
 					dataOut.writeUInt16(index);
 			}
+
 			shape.remapPosition = dataOut.length;
-			for ( i in remapped ) {
-				dataOut.writeInt32(i);
+			for ( i in 0...remapped.length ) {
+				for (j in 0...remapped[i].length) {
+					var toWrite = remapped[i][j];
+
+					// We don't support models vertex count > 2^32 - 1 because we use
+					// the 32th bit for a flag to indicate that it is the last index
+					// affected by this offset
+					if (toWrite > Math.pow(2, 32) - 1)
+						throw ("Not supported, too much vertex");
+
+					if (j == remapped[i].length -1)
+						toWrite = toWrite | (1 << 31);
+
+					dataOut.writeInt32(toWrite);
+				}
 			}
 			d.shapes.push(shape);
 		}
