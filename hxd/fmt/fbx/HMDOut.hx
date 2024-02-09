@@ -220,6 +220,7 @@ class HMDOut extends BaseLibrary {
 		var uvs = geom.getUVs();
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
+		var index = geom.getPolygons();
 
 		// remove empty color data
 		if( colors != null ) {
@@ -287,11 +288,37 @@ class HMDOut extends BaseLibrary {
 		var shapes = geom.getRoot().getAll("Shape");
 		var shapeIndexes = []; // Indexes of vertex used in blendshapes
 		var remappedShapes = [];
-		for ( s in shapes ) {
+		for ( sIdx => s in shapes ) {
 			shapeIndexes.push(s.get("Indexes").getInts());
 
+			// Add to blenshape index, vertex that are in the same triangle
+			// of a index in blendshape
+			var i = 0;
+			var toAdd = [];
+			while (i < verts.length) {
+				var blendShapePoly = false;
+
+				if (shapeIndexes[sIdx].contains(index[i]))
+					blendShapePoly = true;
+
+				if (blendShapePoly) {
+					if (!toAdd.contains(index[i]) && !shapeIndexes[sIdx].contains(index[i]))
+						toAdd.push(index[i]);
+
+					if (!toAdd.contains(index[i+1]) && !shapeIndexes[sIdx].contains(index[i+1]))
+						toAdd.push(index[i+1]);
+
+					if (!toAdd.contains(index[i+2]) && !shapeIndexes[sIdx].contains(index[i+2]))
+						toAdd.push(index[i+2]);
+				}
+
+				i += 3;
+			}
+
+			//shapeIndexes[sIdx] = shapeIndexes[sIdx].concat(toAdd);
+
 			remappedShapes.push([]);
-			for (i in 0...shapeIndexes[shapeIndexes.length -1].length)
+			for (i in 0...shapeIndexes[sIdx].length)
 				remappedShapes[remappedShapes.length - 1].push([]);
 		}
 
@@ -300,7 +327,6 @@ class HMDOut extends BaseLibrary {
 		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
 		var vertexRemap = new Array<Int>();
 		var vertexRemapShape = new Array<Array<Int>>();
-		var index = geom.getPolygons();
 		var count = 0, matPos = 0, stri = 0;
 		var lookup = new Map();
 		var tmp = new h3d.col.Point();
@@ -553,7 +579,7 @@ class HMDOut extends BaseLibrary {
 			var s = shapes[i];
 			var shape = new BlendShape();
 			shape.name = s.name;
-			var indexes = s.get("Indexes").getInts();
+			var indexes = s.get("Indexes").getFloats();//shapeIndexes[i];
 			var verts = s.get("Vertices").getFloats();
 			var normals = s.get("Normals").getFloats();
 			var uvs = s.get("UVs", true)?.getFloats();
