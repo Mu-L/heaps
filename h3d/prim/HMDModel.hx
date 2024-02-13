@@ -330,6 +330,9 @@ class HMDModel extends MeshPrimitive {
 					var offsetInput = 0;
 					for (input in shapes[sIdx].vertexFormat.getInputs()) {
 						for (sizeIdx in 0...input.type.getSize()) {
+							if (input.name == "normal")
+								continue;
+
 							var original = originalBytes.getFloat(affectedVId * vertexFormat.stride + inputMapping[sIdx][input.name] + sizeIdx << 2);
 							var offset = sp.vertexBytes.getFloat(offsetIdx * shapes[sIdx].vertexFormat.stride + offsetInput + sizeIdx << 2);
 
